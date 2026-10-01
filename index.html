@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>학교 급식 알레르기 안심 조회 서비스</title>
+  <style>
+    /* --------------------------------------------------
+       [1] CSS 변수 정의 (라이트 / 다크 모드)
+    -------------------------------------------------- */
+    :root {
+      /* 라이트 모드 (눈이 편안한 웜 베이지 & 세이지 그린) */
+      --bg-color: #f7f5f0;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --sub-text: #666666;
+      --border-color: #e2ded4;
+      --primary-color: #78947f;       /* 파스텔 세이지 그린 */
+      --primary-hover: #637d6a;
+      --accent-alert: #e07a5f;        /* 차분한 코랄 레드 */
+      --badge-bg: #fbebe8;
+      --shadow-color: rgba(0, 0, 0, 0.05);
+      --input-bg: #faf8f5;
+    }
+
+    [data-theme="dark"] {
+      /* 다크 모드 (딥 그레이 & 차분한 모카 톤) */
+      --bg-color: #1e1e24;
+      --card-bg: #2b2b36;
+      --text-color: #e0e0e0;
+      --sub-text: #a0a0b0;
+      --border-color: #3f3f4e;
+      --primary-color: #8da393;
+      --primary-hover: #a3b8a8;
+      --accent-alert: #f08a6e;
+      --badge-bg: #3d2a2a;
+      --shadow-color: rgba(0, 0, 0, 0.3);
+      --input-bg: #23232c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding-bottom: 40px;
+    }
+
+    /* --------------------------------------------------
+       [2] 레이아웃 & 헤더
+    -------------------------------------------------- */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      color: var(--text-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* --------------------------------------------------
+       [3] 컨트롤 섹션 (학교, 날짜, 알레르기 설정)
+    -------------------------------------------------- */
+    .section-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--sub-text);
+      margin-bottom: 6px;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"], input[type="date"], select {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus, input[type="date"]:focus, select:focus {
+      border-color: var(--primary-color);
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--primary-color);
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .btn-outline:hover {
+      background-color: var(--primary-color);
+      color: #ffffff;
+    }
+
+    .saved-info {
+      font-size: 0.8rem;
+      color: var(--sub-text);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* --------------------------------------------------
+       [4] 급식 식단 카드
+    -------------------------------------------------- */
+    .meal-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px var(--shadow-color);
+      margin-top: 20px;
+    }
+
+    .meal-header {
+      background-color: var(--input-bg);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .meal-header .school-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .meal-header .date-text {
+      font-size: 0.85rem;
+      color: var(--sub-text);
+    }
+
+    .meal-list {
+      list-style: none;
+      padding: 16px 20px;
+    }
+
+    .meal-item {
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.05rem;
+    }
+
+    .meal-item:last-child {
+      border-bottom: none;
+    }
+
+    /* 알레르기 감지 스타일 (코랄 레드 밑줄 & 태그) */
+    .meal-item.alert .menu-name {
+      color: var(--accent-alert);
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: var(--accent-alert);
+      text-underline-offset: 4px;
+      text-decoration-thickness: 2px;
+    }
+
+    .warning-badge {
+      background-color: var(--badge-bg);
+      color: var(--accent-alert);
+      border: 1px solid var(--accent-alert);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    /* 영양성분 정보 푸터 */
+    .nutrition-footer {
+      background-color: var(--input-bg);
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .nutrition-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--sub-text);
+      margin-bottom: 8px;
+    }
+
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+
+    .nutrition-item {
+      background-color: var(--card-bg);
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .nutrition-item .label {
+      font-size: 0.75rem;
+      color: var(--sub-text);
+      display: block;
+    }
+
+    .nutrition-item .val {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--sub-text);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 헤더 & 다크모드 토글 -->
+    <header>
+      <h1>🥗 급식 안심 알레르기</h1>
+      <button class="theme-toggle" id="themeToggleBtn">
+        <span id="themeIcon">🌙</span> <span id="themeText">다크 모드</span>
+      </button>
+    </header>
+
+    <!-- 입력 및 컨트롤 섹션 -->
+    <main>
+      <div class="section-card">
+        <!-- 1. 학교 선택 및 고정 -->
+        <div class="input-group">
+          <label for="schoolSelect">학교 선택</label>
+          <div class="flex-row">
+            <select id="schoolSelect">
+              <option value="서울고등학교">서울고등학교</option>
+              <option value="강남중학교">강남중학교</option>
+              <option value="한국초등학교">한국초등학교</option>
+            </select>
+            <button class="btn btn-outline" id="saveSchoolBtn">내 학교 고정</button>
+          </div>
+          <div class="saved-info" id="fixedSchoolInfo">📌 고정된 학교 없음</div>
+        </div>
+
+        <!-- 2. 날짜 선택 -->
+        <div class="input-group">
+          <label for="dateInput">날짜 선택</label>
+          <input type="date" id="dateInput" />
+        </div>
+
+        <!-- 3. 알레르기 성분 입력 및 저장 -->
+        <div class="input-group">
+          <label for="allergyInput">내 알레르기 성분 (쉼표로 구분)</label>
+          <div class="flex-row">
+            <input type="text" id="allergyInput" placeholder="예: 오이, 땅콩, 당근, 우유" />
+            <button class="btn" id="saveAllergyBtn">저장하기</button>
+          </div>
+          <div class="saved-info" id="savedAllergyInfo">💡 저장된 알레르기: 없음</div>
+        </div>
+      </div>
+
+      <!-- 급식 식단 카드 결과 영역 -->
+      <div id="mealContainer"></div>
+    </main>
+  </div>
+
+  <script>
+    /* ==================================================
+       [테스트용 임의 급식 데이터 셋]
+    ================================================== */
+    const mockData = {
+      "서울고등학교": {
+        "2026-09-17": {
+          menu: [
+            { name: "현미밥", ingredients: [] },
+            { name: "오이양파무침", ingredients: [{ name: "오이", score: 5 }] },
+            { name: "소불고기", ingredients: [{ name: "대두", score: 2 }] },
+            { name: "모둠 김밥", ingredients: [{ name: "당근", score: 3 }, { name: "계란", score: 2 }] },
+            { name: "땅콩 조림", ingredients: [{ name: "땅콩", score: 5 }] },
+            { name: "포도주스", ingredients: [] }
+          ],
+          nutrition: { kcal: 720, carb: "95g", protein: "32g", fat: "18g" }
+        },
+        "2026-09-18": {
+          menu: [
+            { name: "차조밥", ingredients: [] },
+            { name: "해물순두부찌개", ingredients: [{ name: "새우", score: 4 }, { name: "조개", score: 3 }] },
+            { name: "닭갈비", ingredients: [{ name: "닭고기", score: 5 }] },
+            { name: "당근 계란말이", ingredients: [{ name: "당근", score: 4 }, { name: "계란", score: 5 }] },
+            { name: "배추김치", ingredients: [] }
+          ],
+          nutrition: { kcal: 680, carb: "88g", protein: "35g", fat: "15g" }
+        }
+      },
+      "강남중학교": {
+        "2026-09-17": {
+          menu: [
+            { name: "쌀밥", ingredients: [] },
+            { name: "돈가스 & 소스", ingredients: [{ name: "돼지고기", score: 5 }, { name: "밀가루", score: 3 }] },
+            { name: "마카로니 샐러드", ingredients: [{ name: "옥수수", score: 3 }, { name: "마요네즈", score: 2 }] },
+            { name: "오이피클", ingredients: [{ name: "오이", score: 5 }] },
+            { name: "크림스프", ingredients: [{ name: "우유", score: 4 }] }
+          ],
+          nutrition: { kcal: 810, carb: "110g", protein: "28g", fat: "25g" }
+        }
+      },
+      "한국초등학교": {
+        "2026-09-17": {
+          menu: [
+            { name: "잡곡밥", ingredients: [] },
+            { name: "쇠고기 미역국", ingredients: [{ name: "쇠고기", score: 3 }] },
+            { name: "연두부 & 양념장", ingredients: [{ name: "대두", score: 4 }] },
+            { name: "오이 겉절이", ingredients: [{ name: "오이", score: 5 }] },
+            { name: "사과", ingredients: [] }
+          ],
+          nutrition: { kcal: 550, carb: "75g", protein: "22g", fat: "10g" }
+        }
+      }
+    };
+
+    /* ==================================================
+       [상태 관리 및 DOM 요소 참조]
+    ================================================== */
+    const schoolSelect = document.getElementById('schoolSelect');
+    const saveSchoolBtn = document.getElementById('saveSchoolBtn');
+    const fixedSchoolInfo = document.getElementById('fixedSchoolInfo');
+
+    const dateInput = document.getElementById('dateInput');
+    const allergyInput = document.getElementById('allergyInput');
+    const saveAllergyBtn = document.getElementById('saveAllergyBtn');
+    const savedAllergyInfo = document.getElementById('savedAllergyInfo');
+
+    const mealContainer = document.getElementById('mealContainer');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    /* ==================================================
+       [1] 다크모드 관리
+    ================================================== */
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeUI(savedTheme);
+    }
+
+    function updateThemeUI(theme) {
+      if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+        themeText.textContent = '라이트 모드';
+      } else {
+        themeIcon.textContent = '🌙';
+        themeText.textContent = '다크 모드';
+      }
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('theme', nextTheme);
+      updateThemeUI(nextTheme);
+    });
+
+    /* ==================================================
+       [2] LocalStorage 데이터 로드 및 초기화
+    ================================================== */
+    function initApp() {
+      // 오늘 날짜 기본 세팅 (YYYY-MM-DD)
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+
+      // 저장된 학교 불러오기
+      const fixedSchool = localStorage.getItem('fixedSchool');
+      if (fixedSchool) {
+        schoolSelect.value = fixedSchool;
+        fixedSchoolInfo.textContent = `📌 고정된 학교: ${fixedSchool}`;
+      }
+
+      // 저장된 알레르기 불러오기
+      const savedAllergies = localStorage.getItem('userAllergies');
+      if (savedAllergies) {
+        allergyInput.value = savedAllergies;
+        savedAllergyInfo.textContent = `💡 저장된 알레르기: ${savedAllergies}`;
+      }
+
+      renderMeal();
+    }
+
+    /* ==================================================
+       [3] 이벤트 리스너 설정
+    ================================================== */
+    // 학교 고정 저장
+    saveSchoolBtn.addEventListener('click', () => {
+      const selectedSchool = schoolSelect.value;
+      localStorage.setItem('fixedSchool', selectedSchool);
+      fixedSchoolInfo.textContent = `📌 고정된 학교: ${selectedSchool}`;
+      alert(`${selectedSchool}가 내 학교로 고정되었습니다!`);
+    });
+
+    // 알레르기 항목 저장
+    saveAllergyBtn.addEventListener('click', () => {
+      const val = allergyInput.value.trim();
+      localStorage.setItem('userAllergies', val);
+      savedAllergyInfo.textContent = `💡 저장된 알레르기: ${val || '없음'}`;
+      renderMeal();
+      alert('알레르기 설정이 저장되었습니다!');
+    });
+
+    // 검색창 실시간 입력 반영
+    allergyInput.addEventListener('input', renderMeal);
+    schoolSelect.addEventListener('change', renderMeal);
+    dateInput.addEventListener('change', renderMeal);
+
+    /* ==================================================
+       [4] 급식 카드 렌더링 핵심 로직
+    ================================================== */
+    function renderMeal() {
+      const school = schoolSelect.value;
+      const date = dateInput.value;
+      const allergyQuery = allergyInput.value
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      const dayData = mockData[school] && mockData[school][date];
+
+      if (!dayData) {
+        mealContainer.innerHTML = `
+          <div class="meal-card">
+            <div class="empty-state">
+              <p>🍽️ 선택하신 날짜(${date})의 급식 정보가 없습니다.</p>
+              <p style="font-size:0.8rem; margin-top:4px;">(테스트 가능 날짜: 2026-09-17, 2026-09-18)</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 메뉴 리스트 생성
+      const menuHtml = dayData.menu.map(item => {
+        let maxAlertScore = 0;
+        let detectedIngredient = '';
+
+        // 사용자가 설정한 알레르기 항목과 대조
+        item.ingredients.forEach(ing => {
+          if (allergyQuery.some(q => ing.name.includes(q) || q.includes(ing.name))) {
+            if (ing.score > maxAlertScore) {
+              maxAlertScore = ing.score;
+              detectedIngredient = ing.name;
+            }
+          }
+        });
+
+        // 감지 여부에 따른 UI 구성
+        if (maxAlertScore > 0) {
+          return `
+            <li class="meal-item alert">
+              <span class="menu-name">${item.name}</span>
+              <span class="warning-badge">
+                ⚠️ 주의 딱지 ${maxAlertScore}개 (${detectedIngredient})
+              </span>
+            </li>
+          `;
+        } else {
+          return `
+            <li class="meal-item">
+              <span class="menu-name">${item.name}</span>
+            </li>
+          `;
+        }
+      }).join('');
+
+      // 최종 카드 HTML 구성
+      mealContainer.innerHTML = `
+        <div class="meal-card">
+          <div class="meal-header">
+            <span class="school-name">${school}</span>
+            <span class="date-text">${date}</span>
+          </div>
+          <ul class="meal-list">
+            ${menuHtml}
+          </ul>
+          <div class="nutrition-footer">
+            <div class="nutrition-title">📊 오늘의 영양 성분 및 칼로리</div>
+            <div class="nutrition-grid">
+              <div class="nutrition-item">
+                <span class="label">열량</span>
+                <span class="val">${dayData.nutrition.kcal} kcal</span>
+              </div>
+              <div class="nutrition-item">
+                <span class="label">탄수화물</span>
+                <span class="val">${dayData.nutrition.carb}</span>
+              </div>
+              <div class="nutrition-item">
+                <span class="label">단백질</span>
+                <span class="val">${dayData.nutrition.protein}</span>
+              </div>
+              <div class="nutrition-item">
+                <span class="label">지방</span>
+                <span class="val">${dayData.nutrition.fat}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 앱 실행시 초기화
+    initTheme();
+    initApp();
+  </script>
+</body>
+</html>
